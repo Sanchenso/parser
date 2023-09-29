@@ -32,7 +32,7 @@ def parser(binFile):
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         subprocess.run("./parser --print_entries " + binFile + " |rg NavPrecision > " + csv_file_NavPrecision,
                        shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        # subprocess.run("./parser --raw_data " + binFile, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.run("./parser --raw_data " + binFile, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except:
         print(binFile, " are not parsing!")
     # удаляем ненужное
@@ -51,10 +51,8 @@ def parser(binFile):
     if result.returncode == 0:
         # получаем строку с информацией о времени
         output_lines = result.stdout.decode().split('\n')
-        flight_time_start = datetime.strptime(output_lines[1].strip()[34:55], '%Y-%m-%dT%H:%M')
-        print('Start', flight_time_start)
-        flight_time_end = datetime.strptime(output_lines[1].strip()[67:-6], '%Y-%m-%dT%H:%M')
-        print('End  ', flight_time_end)
+        print('Start', output_lines[1].strip()[34:55])
+        print('End  ', output_lines[1].strip()[67:-6])
     else:
         print("Ошибка выполнения скрипта!")
 
