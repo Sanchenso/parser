@@ -12,6 +12,9 @@ path = "Result_CSV"
 files_in_path = os.listdir(path)
 suffix = ['_GGA.csv', '_channel_gnss_126_GPS_L1_SNR.csv', '_BarAltitude.csv']
 
+if not os.path.exists('Result_Picture'):
+    os.makedirs('Result_Picture')
+
 
 
 for binfile in os.listdir():
@@ -41,83 +44,108 @@ for binfile in os.listdir():
             if '_NavPrecision.csv' in i:
                 dfPrecision = pd.read_csv(os.path.join(path, i), header=0, sep=',', skiprows=0)
                 dfPrecision['GPS_Time'] = pd.to_datetime(dfPrecision['GPS_Time'])
+                dfPrecision['hAccuracy'] = dfPrecision['hAccuracy'] / 1000
+                dfPrecision['vAccuracy'] = dfPrecision['vAccuracy'] / 1000
+            if '_NavSatInfo.csv' in i:
+                dfNavSatInfo = pd.read_csv(os.path.join(path, i), header=0, sep=',', skiprows=0)
+                dfNavSatInfo['GPS_Time'] = pd.to_datetime(dfNavSatInfo['GPS_Time'])
         dataframes = [dfGGA, dfGPSL1, dfAltitude]
         for df in dataframes:
             df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0])
         min_time = min(df.iloc[:,0].min() for df in dataframes) - timedelta(seconds=5)
         max_time = max(df.iloc[:,0].max() for df in dataframes) + timedelta(seconds=5)
         print(min_time, max_time)
-        fig = plt.figure(figsize=(18, 20))
+        fig = plt.figure(figsize=(20, 10))
+        fig.suptitle(binfile[:-4],  x=0.5, y=0.95, verticalalignment='top')
 
         # SNR
         ax1 = fig.add_subplot(3, 2, 1)
+        ax1.set_title('SNR GPS L1, NMEA GSV', fontsize=9)
         for column in dfGPSL1.columns[1:]:
             ax1.plot(dfGPSL1['Unnamed: 0'], dfGPSL1[column], label=column)
         ax1.set_ylim(10, 60)
         ax1.set_xlim(min_time, max_time)
         ax1.set_ylabel('SNR, dBHz')
         ax1.grid(color='black', linestyle='--', linewidth=0.2)
-        ax1.set_title(binfile)
-        ax1.legend(loc="upper left")
+        ax1.legend(bbox_to_anchor=(-0.1, 1), loc="upper right")
         time_format = mdates.DateFormatter('%H:%M:%S')
         ax1.xaxis.set_major_formatter(time_format)
 
-        # RMC Status
-        textlable1 = ' A=Active \n V=Void'
-        textlable2 = ' A=Autonomous \n D=Differential \n R=RTK \n N=No fix \n F=Float RTK'
+        # # RMC Status
+        # textlable1 = ' A=Active \n V=Void'
+        # textlable2 = ' A=Autonomous \n D=Differential \n R=RTK \n N=No fix \n F=Float RTK'
+        # ax4 = fig.add_subplot(3, 2, 2)
+        # ax4.set_title('Status, NMEA RMC', fontsize=9)
+        # ax4.set_xlim(min_time, max_time)
+        # ax4.plot(dfRMC['GPS_Time'], dfRMC['status'], label=textlable1)
+        # ax4.plot(dfRMC['GPS_Time'], dfRMC['mode_indicator'], label=textlable2)
+        # ax4.set_ylabel('Status')
+        # ax4.xaxis.set_major_formatter(time_format)
+        # ax4.grid(color='black', linestyle='--', linewidth=0.2)
+        # ax4.legend(bbox_to_anchor=(1, 0.4), loc="lower left")
+
+        # Nav Status
+        textlable1 = ' 0=Autonomous \n 1=Float RTK \n 2=Fix RTK'
+        textlable2 = ' 1=invalid \n 2=initialisation \n 3=GNSS \n 4=RTK'
         ax4 = fig.add_subplot(3, 2, 2)
+        ax4.set_title('Status, Nav', fontsize=9)
         ax4.set_xlim(min_time, max_time)
-        ax4.plot(dfRMC['GPS_Time'], dfRMC['status'], label=textlable1)
-        ax4.plot(dfRMC['GPS_Time'], dfRMC['mode_indicator'], label=textlable2)
-        ax4.set_ylabel('Status NMEA GGA')
+        ax4.plot(dfNavSatInfo['GPS_Time'], dfNavSatInfo['NSI_Status'], label=textlable2)
+        ax4.plot(dfNavSatInfo['GPS_Time'], dfNavSatInfo['NavSatInfo'], label=textlable1)
+        ax4.set_ylabel('Status')
         ax4.xaxis.set_major_formatter(time_format)
         ax4.grid(color='black', linestyle='--', linewidth=0.2)
-        ax4.legend(loc="upper left")
+        ax4.legend(bbox_to_anchor=(1, 0.4), loc="lower left")
 
         # Altitude
         ax2 = fig.add_subplot(3, 2, 3)
+        ax2.set_title('Altitude, NMEA GGA vs Pressure Sensor', fontsize=9)
         ax2.set_xlim(min_time, max_time)
         ax2.plot(dfGGA['GPS_Time'], dfGGA['Altitude'], label='Navigation')
         ax2.plot(dfAltitude['GPS_Time'], dfAltitude['BarAltitude'], label='Barometer')
         ax2.set_ylabel('Altitude, m')
         ax2.xaxis.set_major_formatter(time_format)
         ax2.grid(color='black', linestyle='--', linewidth=0.2)
-        ax2.legend(loc="upper left")
+        ax2.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
 
         # GGA_Status
         textlable = ' 0=Invalid \n 1=fixGNSS \n 2=DGPS \n 3=fixPPS \n 4=FixRTK \n 5=FloatRTK'
         ax3 = fig.add_subplot(3, 2, 4)
+        ax3.set_title('Status, NMEA GGA', fontsize=9)
         ax3.set_xlim(min_time, max_time)
         ax3.plot(dfGGA['GPS_Time'], dfGGA['Status'], label=textlable)
-        ax3.set_ylabel('Status GGA')
+        ax3.set_ylabel('Status', fontsize=9)
         ax3.xaxis.set_major_formatter(time_format)
         ax3.grid(color='black', linestyle='--', linewidth=0.2)
-        ax3.set_xlabel('Time')
-        ax3.legend(loc="lower left")
+        ax3.legend(bbox_to_anchor=(1, 0.5), loc="lower left")
 
 
         # Precision
         ax5 = fig.add_subplot(3, 2, 6)
+        ax5.set_title('Precision, NavAUTO', fontsize=9)
         ax5.set_xlim(min_time, max_time)
         ax5.plot(dfPrecision['GPS_Time'], dfPrecision['vAccuracy'], label='vAccuracy')
         ax5.plot(dfPrecision['GPS_Time'], dfPrecision['hAccuracy'], label='hAccuracy')
-        ax5.set_ylabel('Precision, mm')
-        ax5.set_ylim(0, 10000)
+        ax5.set_ylabel('Precision, m')
+        ax5.set_ylim(0, 8)
         ax5.xaxis.set_major_formatter(time_format)
         ax5.grid(color='black', linestyle='--', linewidth=0.2)
-        ax5.legend(loc="upper left")
+        ax5.legend(bbox_to_anchor=(1, 0.75), loc="lower left")
+        ax5.set_xlabel('Time')
 
 
         # Velocity
         ax6 = fig.add_subplot(3, 2, 5)
         ax6.set_xlim(min_time, max_time)
+        ax6.set_title('Velocity, NMEA RMC', fontsize=9)
         ax6.plot(dfRMC['GPS_Time'], dfRMC['Speed'], label='RMC Velocity')
-        ax6.set_ylabel('Precision, mps')
+        ax6.set_ylabel('Velocity, mps')
         ax6.xaxis.set_major_formatter(time_format)
         ax6.grid(color='black', linestyle='--', linewidth=0.2)
-        ax6.legend(loc="upper left")
-        #plt.savefig('New', dpi=500)
-        plt.show()
+        ax6.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
+        ax6.set_xlabel('Time')
+        plt.savefig('Result_Picture/' + binfile[:-4], dpi=500)
+        #plt.show()
 
 
 
