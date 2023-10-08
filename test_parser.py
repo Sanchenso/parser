@@ -21,6 +21,8 @@ def parser(binFile):
     csv_file_time = arg + "_TimeDelta.csv"
     csv_file_NavSatInfo = arg + "_NavSatInfo.csv"
     csv_file_NavPrecision = arg + "_NavPrecision.csv"
+    csv_file_Rssi = arg + "_Rssi.csv"
+
     try:
         result = subprocess.run("./parser --print_entries " + binFile + " |rg NavPosition > " + csv_file_navaltitude,
                                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -31,6 +33,8 @@ def parser(binFile):
         subprocess.run("./parser --print_entries " + binFile + " |rg NavSatInfo > " + csv_file_NavSatInfo, shell=True,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         subprocess.run("./parser --print_entries " + binFile + " |rg NavPrecision > " + csv_file_NavPrecision,
+                       shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        subprocess.run("./parser --print_entries " + binFile + " |rg Rssi > " + csv_file_Rssi,
                        shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         subprocess.run("./parser --raw_data " + binFile, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     except:
@@ -147,6 +151,19 @@ for binFile in files:
         df.to_csv(csv_file_NavPrecision, index=False)
     except:
         print('No NavPrecision')
+
+    try:
+        csv_file_Rssi = arg + "_Rssi.csv"
+        df = pd.read_csv(csv_file_Rssi, header=None, sep=' ', skiprows=1)
+        #df = df.drop(df.columns[[1, 2, 3]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time', 2: 'Rssi', 3: 'RTK_age' , 1: 'Drone_Time'})
+        df_Rssi = df
+        df.to_csv(csv_file_Rssi, index=False)
+    except:
+        print('No Rssi')
+
 
     for csvfile in glob.glob('*.csv'):
         os.rename(csvfile, 'Result_CSV/' + csvfile)
