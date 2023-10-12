@@ -4,7 +4,6 @@ import glob
 from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
-import pynmea2
 import matplotlib.pyplot as plt
 numsecEr = 0
 
@@ -22,24 +21,21 @@ def parser(binFile):
     csv_file_NavSatInfo = arg + "_NavSatInfo.csv"
     csv_file_NavPrecision = arg + "_NavPrecision.csv"
     csv_file_Rssi = arg + "_Rssi.csv"
+    csv_file_LedBoardData = arg + "_LedBoardData.csv"
+    csv_file_IntPowerStatus = arg + "_IntPowerStatus.csv"
+    ubxFile = arg + ".dat"
 
-    try:
-        result = subprocess.run("./parser --print_entries " + binFile + " |rg NavPosition > " + csv_file_navaltitude,
-                                shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        subprocess.run("./parser --print_entries " + binFile + " |rg TimeDelta > " + csv_file_time, shell=True,
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        subprocess.run("./parser --print_entries " + binFile + " |rg Altitude > " + csv_file_baraltitude, shell=True,
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        subprocess.run("./parser --print_entries " + binFile + " |rg NavSatInfo > " + csv_file_NavSatInfo, shell=True,
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        subprocess.run("./parser --print_entries " + binFile + " |rg NavPrecision > " + csv_file_NavPrecision,
-                       shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        subprocess.run("./parser --print_entries " + binFile + " |rg Rssi > " + csv_file_Rssi,
-                       shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        subprocess.run("./parser --raw_data " + binFile, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    except:
-        print(binFile, " are not parsing!")
-    # удаляем ненужное
+    subprocess.run('bash -c "./parser --print_entries ' + binFile + ' | tee >(rg NavPosition > ' + csv_file_navaltitude
+                   + ') >(rg TimeDelta > ' + csv_file_time
+                   + ') >(rg Altitude > ' + csv_file_baraltitude
+                   + ') >(rg NavSatInfo > ' + csv_file_NavSatInfo
+                   + ') >(rg NavPrecision > ' + csv_file_NavPrecision
+                   + ') >(rg Rssi > ' + csv_file_Rssi
+                   + ') >(rg LedBoardData > ' + csv_file_LedBoardData
+                   + ') >(rg IntPowerStatus > ' + csv_file_IntPowerStatus
+                   + ') >/dev/null"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result = subprocess.run("./parser --raw_data " + binFile, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
 
     try:
         os.remove(arg + "_flight_0.gscl")
@@ -123,6 +119,7 @@ for binFile in files:
         ax.plot(df['Drone_Time'], df['BarAltitude'])
         plt.savefig('Result_BAR/' + arg + '_bar', dpi=500)
         #plt.show()
+        plt.close()
         df_BarAltitude = df
         df.to_csv(csv_file_baraltitude, index=False)
     except:
@@ -143,10 +140,11 @@ for binFile in files:
     try:
         csv_file_NavPrecision = arg + "_NavPrecision.csv"
         df = pd.read_csv(csv_file_NavPrecision, header=None, sep=' ', skiprows=1)
-        df = df.drop(df.columns[[1, 5]], axis=1)
+        #df = df.drop(df.columns[[1, 6]], axis=1)
         df[1] = df[0].copy()
         df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
-        df = df.rename(columns={0: 'GPS_Time', 2: 'PDOP', 3: 'vAccuracy', 4: 'hAccuracy', 1: 'Drone_Time'})
+        df = df.rename(columns={0: 'GPS_Time', 2: 'PDOP', 3: 'hAccuracy', 4: 'vAccuracy', 5: 'rtk_age', 1: 'Drone_Time'})
+        df['rtk_age'] = df['rtk_age']/1000
         df_NavPrecision = df
         df.to_csv(csv_file_NavPrecision, index=False)
     except:
@@ -155,15 +153,39 @@ for binFile in files:
     try:
         csv_file_Rssi = arg + "_Rssi.csv"
         df = pd.read_csv(csv_file_Rssi, header=None, sep=' ', skiprows=1)
-        #df = df.drop(df.columns[[1, 2, 3]], axis=1)
+        df = df.drop(df.columns[[1, 3, 4]], axis=1)
         df[1] = df[0].copy()
         df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
-        df = df.rename(columns={0: 'GPS_Time', 2: 'Rssi', 3: 'RTK_age' , 1: 'Drone_Time'})
+        df = df.rename(columns={0: 'GPS_Time', 2: 'Rssi', 1: 'Drone_Time'})
         df_Rssi = df
         df.to_csv(csv_file_Rssi, index=False)
     except:
         print('No Rssi')
 
+    try:
+        csv_file_LedBoardData = arg + "_LedBoardData.csv"
+        df = pd.read_csv(csv_file_LedBoardData, header=None, sep=' ', skiprows=1)
+        #df = df.drop(df.columns[[1, 2, 3]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time', 2: 'Temp_Driver', 3: 'Temp_Led', 4: 'Current', 1: 'Drone_Time'})
+        df_LedBoardData = df
+        df.to_csv(csv_file_LedBoardData, index=False)
+    except:
+        print('No LedBoardData')
+
+
+    try:
+        csv_file_IntPowerStatus = arg + "_IntPowerStatus.csv"
+        df = pd.read_csv(csv_file_IntPowerStatus, header=None, sep=' ', skiprows=1)
+        df = df.drop(df.columns[[1, 2]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time', 3: 'Vbat', 4: 'Percent', 1: 'Drone_Time'})
+        df_IntPowerStatus = df
+        df.to_csv(csv_file_IntPowerStatus, index=False)
+    except:
+        print('No IntPowerStatus')
 
     for csvfile in glob.glob('*.csv'):
         os.rename(csvfile, 'Result_CSV/' + csvfile)
