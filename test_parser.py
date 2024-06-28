@@ -23,6 +23,13 @@ def parser(binFile):
     csv_file_Rssi = arg + "_Rssi.csv"
     csv_file_LedBoardData = arg + "_LedBoardData.csv"
     csv_file_IntPowerStatus = arg + "_IntPowerStatus.csv"
+    csv_file_NavVelocity = arg + "_NavVelocity.csv"
+    csv_file_EventLog = arg + "_EventLog.csv"
+    csv_file_UavMode = arg + "_UavMode.csv"
+    csv_file_Orientation = arg + "_Orientation.csv"
+    csv_file_Motor = arg + "_Motor.csv"
+    csv_file_RawAccelGyroData = arg + "_RawAccelGyroData.csv"
+    csv_file_ExtPowerStatus = arg + "_ExtPowerStatus.csv"
     ubxFile = arg + ".dat"
 
     subprocess.run('bash -c "./parser --print_entries ' + binFile + ' | tee >(rg NavPosition > ' + csv_file_navaltitude
@@ -33,6 +40,13 @@ def parser(binFile):
                    + ') >(rg Rssi > ' + csv_file_Rssi
                    + ') >(rg LedBoardData > ' + csv_file_LedBoardData
                    + ') >(rg IntPowerStatus > ' + csv_file_IntPowerStatus
+                   + ') >(rg ExtPowerStatus > ' + csv_file_ExtPowerStatus
+                   + ') >(rg NavVelocity > ' + csv_file_NavVelocity
+                   + ') >(rg EventLog > ' + csv_file_EventLog
+                   + ') >(rg UavMode > ' + csv_file_UavMode
+                   + ') >(rg Orientation > ' + csv_file_Orientation 
+                   + ') >(rg Motor > ' + csv_file_Motor
+                   + ') >(rg RawAccelGyroData > ' + csv_file_RawAccelGyroData
                    + ') >/dev/null"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     result = subprocess.run("./parser --raw_data " + binFile, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
@@ -103,6 +117,7 @@ for binFile in files:
         df_NavAltitude = df
         df.to_csv(csv_file_navaltitude, index=False)
     except:
+        os.remove(csv_file_navaltitude)
         print('No NavAltitude')
 
     try:
@@ -123,6 +138,7 @@ for binFile in files:
         df_BarAltitude = df
         df.to_csv(csv_file_baraltitude, index=False)
     except:
+        os.remove(csv_file_baraltitude)
         print('No BarAltitude')
 
     try:
@@ -135,6 +151,7 @@ for binFile in files:
         df_NavSatInfo = df
         df.to_csv(csv_file_NavSatInfo, index=False)
     except:
+        os.remove(csv_file_NavSatInfo)
         print('No NavSatInfo')
 
     try:
@@ -148,6 +165,7 @@ for binFile in files:
         df_NavPrecision = df
         df.to_csv(csv_file_NavPrecision, index=False)
     except:
+        os.remove(csv_file_NavPrecision)
         print('No NavPrecision')
 
     try:
@@ -160,6 +178,7 @@ for binFile in files:
         df_Rssi = df
         df.to_csv(csv_file_Rssi, index=False)
     except:
+        os.remove(csv_file_Rssi)
         print('No Rssi')
 
     try:
@@ -172,6 +191,7 @@ for binFile in files:
         df_LedBoardData = df
         df.to_csv(csv_file_LedBoardData, index=False)
     except:
+        os.remove(csv_file_LedBoardData)
         print('No LedBoardData')
 
 
@@ -185,8 +205,107 @@ for binFile in files:
         df_IntPowerStatus = df
         df.to_csv(csv_file_IntPowerStatus, index=False)
     except:
+        os.remove(csv_file_IntPowerStatus)
         print('No IntPowerStatus')
+        
+    try:
+        csv_file_ExtPowerStatus = arg + "_ExtPowerStatus.csv"
+        df = pd.read_csv(csv_file_ExtPowerStatus, header=None, sep=' ', skiprows=1)
+        df = df.drop(df.columns[[1, 2]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time', 3: 'Vbat', 4: 'Percent', 1: 'Drone_Time'})
+        df_ExtPowerStatus = df
+        df.to_csv(csv_file_ExtPowerStatus, index=False)
+    except:
+        os.remove(csv_file_ExtPowerStatus)
+        print('No ExtPowerStatus')        
 
+    try:
+        csv_file_NavVelocity = arg + "_NavVelocity.csv"
+        df = pd.read_csv(csv_file_NavVelocity, header=None, sep=' ', skiprows=1)
+        df = df.drop(df.columns[[1]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df[5] = round((df[2]**2 + df[3]**2 + df[4]**2)**(0.5),2)
+        df = df.rename(columns={0: 'GPS_Time', 1: 'Drone_Time', 2: 'Velocity1', 3: 'Velocity2', 4: 'Velocity3', 5: 'Velocity'})
+        df_csv_file_NavVelocity = df
+        df.to_csv(csv_file_NavVelocity, index=False)
+    except:
+        os.remove(csv_file_NavVelocity)
+        print('No NavVelocity')
+
+    try:
+        csv_file_EventLog = arg + "_EventLog.csv"
+        df = pd.read_csv(csv_file_EventLog, header=None, sep=' ', skiprows=1)
+        df = df.drop(df.columns[[1]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time',  1: 'Drone_Time', 2: 'EventLog'})
+        df_csv_file_EventLog = df
+        df.to_csv(csv_file_EventLog, index=False)
+    except:
+        os.remove(csv_file_EventLog)
+        print('No EventLog')  
+    
+    try:
+        csv_file_UavMode = arg + "_UavMode.csv"
+        df = pd.read_csv(csv_file_UavMode, header=None, sep=' ', skiprows=1)
+        df = df.drop(df.columns[[1]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time',  1: 'Drone_Time', 2: 'UavMode'})
+        df_csv_file_UavMode = df
+        df.to_csv(csv_file_UavMode, index=False)
+    except:
+        os.remove(csv_file_UavMode)
+        print('No UavMode')    
+
+    try:
+        csv_file_Orientation = arg + "_Orientation.csv"
+        df = pd.read_csv(csv_file_Orientation, header=None, sep=' ', skiprows=1)
+        df = df.drop(df.columns[[1]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time', 1: 'Drone_Time', 2: 'Roll', 3: 'Pitch', 4: 'Yav'})
+        df_csv_file_Orientation = df
+        df.to_csv(csv_file_Orientation, index=False)
+    except:
+        os.remove(csv_file_Orientation)
+        print('No Orientation')           
+    
+    try:
+        csv_file_Motor = arg + "_Motor.csv"
+        df = pd.read_csv(csv_file_Motor, header=None, sep=' ', skiprows=10)
+        df = df.drop(df.columns[[1, 3]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time', 1: 'Drone_Time', 2: 'MotorID', 4: 'Voltage', 5: 'Current', 6: 'RPM', 7: 'ErrorCount', 8: 'RestartCount'})
+        unique_motor_ids = df['MotorID'].unique()
+        for motor_number in unique_motor_ids:
+            df_Motor = df[df['MotorID'] == motor_number]
+            df_Motor.to_csv(arg + '_' + f'Motor_{motor_number}.csv', index=False)
+            #df.to_csv(csv_file_Motor, index=False)
+        os.remove(csv_file_Motor)
+    except:
+        os.remove(csv_file_Motor)
+        print('No Motor')  
+    
+    try:
+        csv_file_RawAccelGyroData = arg + "_RawAccelGyroData.csv"
+        df = pd.read_csv(csv_file_RawAccelGyroData, header=None, sep=' ', skiprows=10)
+        df = df.drop(df.columns[[1, 5]], axis=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time', 1: 'Drone_Time', 2: 'accel_X', 3: 'accel_Y', 4: 'accel_Z', 6: 'gyro_X', 7: 'gyro_Y', 8: 'gyro_Z'})
+        df_csv_file_RawAccelGyroData = df
+        df.to_csv(csv_file_RawAccelGyroData, index=False)
+    except:
+        os.remove(csv_file_RawAccelGyroData)
+        print('No RawAccelGyroData')   
+    
     for csvfile in glob.glob('*.csv'):
-        os.rename(csvfile, 'Result_CSV/' + csvfile)
-
+        if os.path.getsize(csvfile) > 0:
+            os.rename(csvfile, 'Result_CSV/' + csvfile)
+        else:
+            os.remove(csvfile)
