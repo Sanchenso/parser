@@ -21,7 +21,7 @@ if not os.path.exists('Result_Picture'):
 
 # Определение функции для парсинга нескольких форматов даты и времени
 def parse_multiple_formats(date_str):
-    formats = ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%H:%M:%S.%f", "%H:%M:%S"] 
+    formats = ["%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%H:%M:%S.%f"] 
     
     for fmt in formats:
         try:

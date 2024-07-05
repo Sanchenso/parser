@@ -20,7 +20,7 @@ if not os.path.exists('Result_Picture_led'):
 
 # Определение функции для парсинга нескольких форматов даты и времени
 def parse_multiple_formats(date_str):
-    formats = ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%H:%M:%S.%f", "%H:%M:%S"] 
+    formats = ["%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%H:%M:%S.%f"] 
     
     for fmt in formats:
         try:
@@ -62,7 +62,7 @@ for binfile in os.listdir():
             df.iloc[:, 0] = pd.to_datetime(df.iloc[:, 0])
         min_time = min(df.iloc[:,0].min() for df in dataframes) - timedelta(seconds=5)
         max_time = max(df.iloc[:,0].max() for df in dataframes) + timedelta(seconds=5)
-        print(min_time, max_time)
+        print(min_time.strftime("%H:%M:%S"), max_time.strftime("%H:%M:%S"))
         fig = plt.figure(figsize=(10, 14))
         fig.suptitle(binfile[:-4],  x=0.5, y=0.95, verticalalignment='top')
         time_format = mdates.DateFormatter('%H:%M:%S')
