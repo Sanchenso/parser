@@ -20,18 +20,22 @@ processes = []
 for i in files:
     if i[-4:] in ('.dat', '.ubx', '.log') or i[-5:] == '.cyno':
         print(i)
+        subprocess.call('python3 NMEA.py ' + i + ' GPS L1', shell=True)
+        subprocess.call('python3 NMEA.py ' + i + ' GPS L2', shell=True)
+        subprocess.call('python3 NMEA.py ' + i + ' BeiDou L1', shell=True)
+        subprocess.call('python3 NMEA.py ' + i + ' BeiDou L2', shell=True)
         # Start each script as a subprocess
-        processes.append(subprocess.Popen(f"python3 NMEA.py {i} GPS L1", shell=True))
-        processes.append(subprocess.Popen(f"python3 NMEA.py {i} GPS L2", shell=True))
-        processes.append(subprocess.Popen(f"python3 NMEA.py {i} Glonass L1", shell=True))
-        processes.append(subprocess.Popen(f"python3 NMEA.py {i} Glonass L2", shell=True))
-        processes.append(subprocess.Popen(f"python3 NMEA.py {i} BeiDou L1", shell=True))
-        processes.append(subprocess.Popen(f"python3 NMEA.py {i} BeiDou L2", shell=True))
+        #processes.append(subprocess.Popen(f"python3 NMEA.py {i} GPS L1", shell=True))
+        #processes.append(subprocess.Popen(f"python3 NMEA.py {i} GPS L2", shell=True))
+        #processes.append(subprocess.Popen(f"python3 NMEA.py {i} Glonass L1", shell=True))
+        #processes.append(subprocess.Popen(f"python3 NMEA.py {i} Glonass L2", shell=True))
+        #processes.append(subprocess.Popen(f"python3 NMEA.py {i} BeiDou L1", shell=True))
+        #processes.append(subprocess.Popen(f"python3 NMEA.py {i} BeiDou L2", shell=True))
         #subprocess.call("python3 " + 'NMEA.py ' + i + ' ' + 'Galileo' + ' ' + 'L1', shell=True)
         #subprocess.call("python3 " + 'NMEA.py ' + i + ' ' + 'Galileo' + ' ' + 'L2', shell=True)
 # Wait for all processes to complete
-for process in processes:
-    process.wait()
+#for process in processes:
+#    process.wait()
 
 path = "Result_CSV"
 files_in_path = os.listdir(path)

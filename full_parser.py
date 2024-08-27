@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-#subprocess.call("python3 " + 'test_parser.py', shell=True)
+subprocess.call("python3 " + 'test_parser.py', shell=True)
 subprocess.call("python3 " + 'NMEA_all.py', shell=True)
 
 commands = [
