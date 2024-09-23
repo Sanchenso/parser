@@ -110,10 +110,10 @@ for binFile in files:
     try:
         csv_file_navaltitude = arg + "_NavAltitude.csv"
         df = pd.read_csv(csv_file_navaltitude, header=None, sep=' ', skiprows=1)
-        df = df.drop(df.columns[[1, 2, 3]], axis=1)
+        df = df.drop(df.columns[[1]], axis=1)
         df[1] = df[0].copy()
         df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
-        df = df.rename(columns={0: 'GPS_Time', 4: 'NavAltitude', 1: 'Drone_Time'})
+        df = df.rename(columns={0: 'GPS_Time',2:'NavLongitude',3:'NavLatitude', 4: 'NavAltitude', 1: 'Drone_Time'})
         df_NavAltitude = df
         df.to_csv(csv_file_navaltitude, index=False)
     except:

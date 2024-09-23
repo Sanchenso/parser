@@ -158,7 +158,7 @@ for binfile in os.listdir():
             ax5.plot(dfTXT['GPS_Time'], dfTXT['0'], label='0')
             ax5.plot(dfTXT['GPS_Time'], dfTXT['1'], label='1')
             ax5.plot(dfTXT['GPS_Time'], dfTXT['2'], label='2')
-            ax5.plot(dfTXT['GPS_Time'], dfTXT['3'], label='3')
+            #ax5.plot(dfTXT['GPS_Time'], dfTXT['3'], label='3')
             ax5.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
         ax5.set_ylabel('Message')
         ax5.xaxis.set_major_formatter(time_format)
