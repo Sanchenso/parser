@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from shlex import quote
 numsecEr = 0
 
 if not os.path.exists('Result_CSV'):
@@ -15,41 +16,67 @@ if not os.path.exists('Result_BAR'):
 
 def parser(binFile):
     arg = binFile[:-4]
-    csv_file_navaltitude = arg + "_NavAltitude.csv"
-    csv_file_baraltitude = arg + "_BarAltitude.csv"
-    csv_file_time = arg + "_TimeDelta.csv"
-    csv_file_NavSatInfo = arg + "_NavSatInfo.csv"
-    csv_file_NavPrecision = arg + "_NavPrecision.csv"
-    csv_file_Rssi = arg + "_Rssi.csv"
-    csv_file_LedBoardData = arg + "_LedBoardData.csv"
-    csv_file_IntPowerStatus = arg + "_IntPowerStatus.csv"
-    csv_file_NavVelocity = arg + "_NavVelocity.csv"
-    csv_file_EventLog = arg + "_EventLog.csv"
-    csv_file_UavMode = arg + "_UavMode.csv"
-    csv_file_Orientation = arg + "_Orientation.csv"
-    csv_file_Motor = arg + "_Motor.csv"
-    csv_file_RawAccelGyroData = arg + "_RawAccelGyroData.csv"
-    csv_file_ExtPowerStatus = arg + "_ExtPowerStatus.csv"
-    ubxFile = arg + ".dat"
+    # Генерация имен выходных файлов
+    csv_file_navaltitude = quote(arg + "_NavAltitude.csv")
+    csv_file_baraltitude = quote(arg + "_BarAltitude.csv")
+    csv_file_time = quote(arg + "_TimeDelta.csv")
+    csv_file_NavSatInfo = quote(arg + "_NavSatInfo.csv")
+    csv_file_NavPrecision = quote(arg + "_NavPrecision.csv")
+    csv_file_Rssi = quote(arg + "_Rssi.csv")
+    csv_file_LedBoardData = quote(arg + "_LedBoardData.csv")
+    csv_file_IntPowerStatus = quote(arg + "_IntPowerStatus.csv")
+    csv_file_NavVelocity = quote(arg + "_NavVelocity.csv")
+    csv_file_EventLog = quote(arg + "_EventLog.csv")
+    csv_file_UavMode = quote(arg + "_UavMode.csv")
+    csv_file_Orientation = quote(arg + "_Orientation.csv")
+    csv_file_Motor = quote(arg + "_Motor.csv")
+    csv_file_RawAccelGyroData = quote(arg + "_RawAccelGyroData.csv")
+    csv_file_ExtPowerStatus = quote(arg + "_ExtPowerStatus.csv")
+    ubxFile = quote(arg + ".dat")
+    binFile_quoted = quote(binFile)
 
-    subprocess.run('bash -c "./parser --print_entries ' + binFile + ' | tee >(rg NavPosition > ' + csv_file_navaltitude
-                   + ') >(rg TimeDelta > ' + csv_file_time
-                   + ') >(rg Altitude > ' + csv_file_baraltitude
-                   + ') >(rg NavSatInfo > ' + csv_file_NavSatInfo
-                   + ') >(rg NavPrecision > ' + csv_file_NavPrecision
-                   + ') >(rg Rssi > ' + csv_file_Rssi
-                   + ') >(rg LedBoardData > ' + csv_file_LedBoardData
-                   + ') >(rg IntPowerStatus > ' + csv_file_IntPowerStatus
-                   + ') >(rg ExtPowerStatus > ' + csv_file_ExtPowerStatus
-                   + ') >(rg NavVelocity > ' + csv_file_NavVelocity
-                   + ') >(rg EventLog > ' + csv_file_EventLog
-                   + ') >(rg UavMode > ' + csv_file_UavMode
-                   + ') >(rg Orientation > ' + csv_file_Orientation 
-                   + ') >(rg Motor > ' + csv_file_Motor
-                   + ') >(rg RawAccelGyroData > ' + csv_file_RawAccelGyroData
-                   + ') >/dev/null"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    result = subprocess.run("./parser --raw_data " + binFile, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    # Строим команду
+    cmd = (
+        f'bash -c "./parser --print_entries {binFile_quoted} | tee '
+        f'>(rg NavPosition > {csv_file_navaltitude}) '
+        f'>(rg TimeDelta > {csv_file_time}) '
+        f'>(rg Altitude > {csv_file_baraltitude}) '
+        f'>(rg NavSatInfo > {csv_file_NavSatInfo}) '
+        f'>(rg NavPrecision > {csv_file_NavPrecision}) '
+        f'>(rg Rssi > {csv_file_Rssi}) '
+        f'>(rg LedBoardData > {csv_file_LedBoardData}) '
+        f'>(rg IntPowerStatus > {csv_file_IntPowerStatus}) '
+        f'>(rg ExtPowerStatus > {csv_file_ExtPowerStatus}) '
+        f'>(rg NavVelocity > {csv_file_NavVelocity}) '
+        f'>(rg EventLog > {csv_file_EventLog}) '
+        f'>(rg UavMode > {csv_file_UavMode}) '
+        f'>(rg Orientation > {csv_file_Orientation}) '
+        f'>(rg Motor > {csv_file_Motor}) '
+        f'>(rg RawAccelGyroData > {csv_file_RawAccelGyroData}) '
+        f'>/dev/null"'
+    )
 
+    # Выполняем команду
+    result = subprocess.run(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
+    # Проверяем и выводим результат
+    if result.returncode != 0:
+        print(f"Command failed with return code {result.returncode}")
+        print(f"Error Output: {result.stderr.decode()}")
+        return
+
+    # Проверяем успешность выполнения второй команды
+    result = subprocess.run(
+        f"./parser --raw_data {binFile_quoted}",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT
+    )
 
     try:
         os.remove(arg + "_flight_0.gscl")
@@ -58,12 +85,14 @@ def parser(binFile):
         os.remove(arg + "_channel_passports_124.dat")
         os.remove(arg + "_channel_telemetry_123.dat")
         os.rename(arg + "_channel_gnss_126.dat", ubxFile)
-    except:
-        None
+    except FileNotFoundError as e:
+        print(f"Error while trying to remove or rename a file: {e}")
+    except OSError as e:
+        print(f"OS error occurred: {e}")
 
-    # проверяем успешность выполнения скрипта
+    # Проверяем выполнение последней команды
     if result.returncode == 0:
-        # получаем строку с информацией о времени
+        # Получаем строку с информацией о времени
         output_lines = result.stdout.decode().split('\n')
         print('Start', output_lines[1].strip()[34:55])
         print('End  ', output_lines[1].strip()[67:-6])
@@ -92,7 +121,6 @@ def convert_time(value, coefficients, polynomial):
     utc_time = gps_start_date + timedelta(seconds=float(y_approx))
     formatted_output = utc_time.strftime('%H:%M:%S.%f')
     return formatted_output
-
 
 data = []
 files = glob.glob('*.bin')
@@ -127,19 +155,19 @@ for binFile in files:
         df[1] = df[0].copy()
         df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
         df = df.rename(columns={0: 'GPS_Time', 2: 'BarAltitude', 1: 'Drone_Time'})
-        fig, ax = plt.subplots()
+        #fig, ax = plt.subplots()
         df['BarAltitude'] = df['BarAltitude'].astype(float)
-        ax.plot(df['Drone_Time'], df['BarAltitude'])
+        #ax.plot(df['Drone_Time'], df['BarAltitude'])
         df['BarAltitude'] = df['BarAltitude'].ewm(alpha=0.1).mean()
-        ax.plot(df['Drone_Time'], df['BarAltitude'])
-        plt.savefig('Result_BAR/' + arg + '_bar', dpi=500)
-        #plt.show()
-        plt.close()
+        #ax.plot(df['Drone_Time'], df['BarAltitude'])
+        #plt.savefig('Result_BAR/' + arg + '_bar', dpi=500)
+        #plt.close()
         df_BarAltitude = df
         df.to_csv(csv_file_baraltitude, index=False)
     except:
         os.remove(csv_file_baraltitude)
         print('No BarAltitude')
+
 
     try:
         csv_file_NavSatInfo = arg + "_NavSatInfo.csv"
