@@ -4,14 +4,11 @@ import glob
 from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from shlex import quote
 numsecEr = 0
 
 if not os.path.exists('Result_CSV'):
     os.makedirs('Result_CSV')
-if not os.path.exists('Result_BAR'):
-    os.makedirs('Result_BAR')
 
 
 def parser(binFile):
@@ -185,7 +182,6 @@ for binFile in files:
     try:
         csv_file_NavPrecision = arg + "_NavPrecision.csv"
         df = pd.read_csv(csv_file_NavPrecision, header=None, sep=' ', skiprows=1)
-        #df = df.drop(df.columns[[1, 6]], axis=1)
         df[1] = df[0].copy()
         df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
         df = df.rename(columns={0: 'GPS_Time', 2: 'PDOP', 3: 'hAccuracy', 4: 'vAccuracy', 5: 'rtk_age', 1: 'Drone_Time'})
@@ -212,7 +208,6 @@ for binFile in files:
     try:
         csv_file_LedBoardData = arg + "_LedBoardData.csv"
         df = pd.read_csv(csv_file_LedBoardData, header=None, sep=' ', skiprows=1)
-        #df = df.drop(df.columns[[1, 2, 3]], axis=1)
         df[1] = df[0].copy()
         df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
         df = df.rename(columns={0: 'GPS_Time', 2: 'Temp_Driver', 3: 'Temp_Led', 4: 'Current', 1: 'Drone_Time'})
@@ -313,7 +308,6 @@ for binFile in files:
         for motor_number in unique_motor_ids:
             df_Motor = df[df['MotorID'] == motor_number]
             df_Motor.to_csv(arg + '_' + f'Motor_{motor_number}.csv', index=False)
-            #df.to_csv(csv_file_Motor, index=False)
         os.remove(csv_file_Motor)
     except:
         os.remove(csv_file_Motor)
