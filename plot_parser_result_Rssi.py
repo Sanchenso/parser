@@ -153,7 +153,6 @@ for binfile in os.listdir():
         ax5 = fig.add_subplot(3, 2, 5)
         ax5.set_title('NMEA TXT', fontsize=9)
         ax5.set_xlim(min_time, max_time)
-        print(dfTXT)
         if flagTXT == 1:
             dfTXT.columns = ['GPS_Time'] + list(dfTXT.iloc[:, 1:].columns)
             ax5.plot(dfTXT['GPS_Time'], dfTXT['1'], label='0')
@@ -176,8 +175,9 @@ for binfile in os.listdir():
         ax4.xaxis.set_major_formatter(time_format)
         ax4.grid(color='black', linestyle='--', linewidth=0.2)
         ax4.legend(bbox_to_anchor=(1, 1), loc="upper left")
-        plt.savefig('Result_Picture_Rssi/' + binfile[:-4], dpi=500)
+        plt.savefig('Result_Picture_Rssi/' + binfile[:-4], dpi=200)
         #plt.show()
+        plt.close()
 
 
 

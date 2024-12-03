@@ -228,7 +228,7 @@ for binfile in os.listdir():
         ax6.grid(color='black', linestyle='--', linewidth=0.2)
         ax6.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
         ax6.set_xlabel('Time')
-        plt.savefig('Result_Picture/' + binfile[:-4] + '.jpeg', dpi=500)
+        plt.savefig('Result_Picture/' + binfile[:-4] + '.jpeg', dpi=200)
         #plt.show()
         plt.close(fig)
 
