@@ -4,16 +4,10 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import timedelta, datetime
 
-dfGGA = pd.DataFrame()
-dfGPSL1 = pd.DataFrame()
-dfBeiDouL1 = pd.DataFrame()
-dfAltitude = pd.DataFrame()
-dfNavVelocity = pd.DataFrame()
-dataframes = []
 path = "Result_CSV"
 files_in_path = os.listdir(path)
 suffix = ['_GGA.csv', '_channel_gnss_126_GPS_L1_SNR.csv', '_BarAltitude.csv']
-flagRMC = 0
+
 
 if not os.path.exists('Result_Picture'):
     os.makedirs('Result_Picture')
@@ -37,6 +31,13 @@ for binfile in os.listdir():
         print(binfile)
         prefix = binfile[:-4]
         files_with_prefix = [file for file in files_in_path if file.startswith(prefix)]
+        dataframes = []
+        dfGGA = pd.DataFrame()
+        dfGPSL1 = pd.DataFrame()
+        dfBeiDouL1 = pd.DataFrame()
+        dfAltitude = pd.DataFrame()
+        dfNavVelocity = pd.DataFrame()
+        flagRMC = 0
         for i in files_with_prefix:
             if '_GGA.csv' in i:
                 dfGGA = pd.read_csv(os.path.join(path, i), header=0, sep=',', skiprows=0)
@@ -111,17 +112,17 @@ for binfile in os.listdir():
         # for column in dfBeiDouL1.columns[1:]:
             # ax1.scatter(dfBeiDouL1['GPS_Time'], dfBeiDouL1[column], s=2)
             # ax1.plot(dfBeiDouL1['GPS_Time'], dfBeiDouL1[column], linewidth=0.2)
-            
-        sumSNR_gps = dfGPSL1.iloc[:, 1:].sum().sum()
-        countSNR_gps = dfGPSL1.iloc[:, 1:].count().sum()
-        #avgSNR_gps = round(float(sumSNR_gps) / float(countSNR_gps), 1)
-        
-        #sumSNR_beidou = dfBeiDouL1.iloc[:, 1:].sum().sum()
-        #countSNR_beidou = dfBeiDouL1.iloc[:, 1:].count().sum() 
-        #avgSNR_beidou = round(float(sumSNR_beidou) / float(countSNR_beidou), 1)
+        if not dfGPSL1.empty:
+            sumSNR_gps = dfGPSL1.iloc[:, 1:].sum().sum()
+            countSNR_gps = dfGPSL1.iloc[:, 1:].count().sum()
+            avgSNR_gps = round(float(sumSNR_gps) / float(countSNR_gps), 1)
 
-        #ax1.text(0.01, 0.98, f'     GPS L1: {avgSNR_gps} dBHz', fontsize=10, transform=ax1.transAxes, verticalalignment='top')
-        #ax1.text(0.01, 0.92, f'BeiDou L1: {avgSNR_beidou} dBHz', fontsize=10, transform=ax1.transAxes, verticalalignment='top')
+            #sumSNR_beidou = dfBeiDouL1.iloc[:, 1:].sum().sum()
+            #countSNR_beidou = dfBeiDouL1.iloc[:, 1:].count().sum()
+            #avgSNR_beidou = round(float(sumSNR_beidou) / float(countSNR_beidou), 1)
+
+            ax1.text(0.01, 0.98, f'     GPS L1: {avgSNR_gps} dBHz', fontsize=10, transform=ax1.transAxes, verticalalignment='top')
+            #ax1.text(0.01, 0.92, f'BeiDou L1: {avgSNR_beidou} dBHz', fontsize=10, transform=ax1.transAxes, verticalalignment='top')
         ax1.set_ylim(10, 60)
         if not dfAltitude.empty:
             ax1.set_xlim(min_time, max_time)
@@ -145,15 +146,16 @@ for binfile in os.listdir():
         # ax4.legend(bbox_to_anchor=(1, 0.4), loc="lower left")
 
         # RTK_age_NMEA
-        ax4 = fig.add_subplot(3, 2, 2)
-        ax4.set_xlim(min_time, max_time)
-        ax4.set_title('RTK age, NMEA GGA', fontsize=9)
-        ax4.plot(dfGGA['GPS_Time'], dfGGA['rtkAGE'], label='RTK age', linewidth=0.2)
-        ax4.scatter(dfGGA['GPS_Time'], dfGGA['rtkAGE'], label='RTK age', s=2)
-        ax4.set_ylabel('Rtk age, sec')
-        ax4.xaxis.set_major_formatter(time_format)
-        ax4.grid(color='black', linestyle='--', linewidth=0.2)
-        ax4.legend(bbox_to_anchor=(1, 1), loc="upper left")
+        if not dfGGA.empty:
+            ax4 = fig.add_subplot(3, 2, 2)
+            ax4.set_xlim(min_time, max_time)
+            ax4.set_title('RTK age, NMEA GGA', fontsize=9)
+            ax4.plot(dfGGA['GPS_Time'], dfGGA['rtkAGE'], label='RTK age', linewidth=0.2)
+            ax4.scatter(dfGGA['GPS_Time'], dfGGA['rtkAGE'], label='RTK age', s=2)
+            ax4.set_ylabel('Rtk age, sec')
+            ax4.xaxis.set_major_formatter(time_format)
+            ax4.grid(color='black', linestyle='--', linewidth=0.2)
+            ax4.legend(bbox_to_anchor=(1, 1), loc="upper left")
  
 
 
@@ -177,23 +179,25 @@ for binfile in os.listdir():
         if not dfAltitude.empty:
             ax2.set_xlim(min_time, max_time)
             ax2.plot(dfAltitude['GPS_Time'], dfAltitude['BarAltitude'], label='Bar Altitude')
-        ax2.plot(dfGGA['GPS_Time'], dfGGA['Altitude'], label='GGA Altitude')
-        ax2.set_ylabel('Altitude, m')
-        ax2.xaxis.set_major_formatter(time_format)
-        ax2.grid(color='black', linestyle='--', linewidth=0.2)
-        ax2.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
+        if not dfGGA.empty:
+            ax2.plot(dfGGA['GPS_Time'], dfGGA['Altitude'], label='GGA Altitude')
+            ax2.set_ylabel('Altitude, m')
+            ax2.xaxis.set_major_formatter(time_format)
+            ax2.grid(color='black', linestyle='--', linewidth=0.2)
+            ax2.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
+            # GGA_Status
+            textlable = ' 0=Invalid \n 1=fixGNSS \n 2=DGPS \n 3=fixPPS \n 4=FixRTK \n 5=FloatRTK'
 
-        # GGA_Status
-        textlable = ' 0=Invalid \n 1=fixGNSS \n 2=DGPS \n 3=fixPPS \n 4=FixRTK \n 5=FloatRTK'
         ax3 = fig.add_subplot(3, 2, 4)
         ax3.set_title('Status, NMEA GGA', fontsize=9)
         if not dfAltitude.empty:
             ax3.set_xlim(min_time, max_time)
-        ax3.plot(dfGGA['GPS_Time'], dfGGA['Status'], label=textlable)
-        ax3.set_ylabel('Status', fontsize=9)
-        ax3.xaxis.set_major_formatter(time_format)
-        ax3.grid(color='black', linestyle='--', linewidth=0.2)
-        ax3.legend(bbox_to_anchor=(1, 0.5), loc="lower left")
+        if not dfGGA.empty:
+            ax3.plot(dfGGA['GPS_Time'], dfGGA['Status'], label=textlable)
+            ax3.set_ylabel('Status', fontsize=9)
+            ax3.xaxis.set_major_formatter(time_format)
+            ax3.grid(color='black', linestyle='--', linewidth=0.2)
+            ax3.legend(bbox_to_anchor=(1, 0.5), loc="lower left")
 
 
         # Precision
