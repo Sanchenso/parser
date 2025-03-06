@@ -1,6 +1,7 @@
 import os
-import sys
+import subprocess
 import pandas as pd
+import georinex as gr
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import timedelta, datetime
@@ -9,7 +10,6 @@ path = "Result_CSV"
 files_in_path = os.listdir(path)
 suffix = ['_GGA.csv', '_channel_gnss_126_GPS_L1_SNR.csv', '_BarAltitude.csv']
 
-expansion = (sys.argv[1]) if len(sys.argv) > 1 else '.bin'
 
 if not os.path.exists('Result_Picture'):
     os.makedirs('Result_Picture')
@@ -28,9 +28,17 @@ def parse_multiple_formats(date_str):
     return pd.NaT  # Если ни один формат не подошел, возвращаем NaT
 
 
+for arg in os.listdir():
+    if arg[-4:] in ('.dat', '.ubx', '.log') or arg[-5:] == '.cyno':
+        ubxFile = arg[:-4] + ".dat"
+        obsFile = arg[:-4] + ".obs"
+        print(ubxFile)
+        subprocess.call("convbin " + ubxFile + " -o " + obsFile + " -os -r ubx", shell=True)
+
 for binfile in os.listdir():
-    if binfile[-4:] == expansion:
+    if binfile[-4:] == '.bin' and (binfile[:-4] + ".obs" ) in os.listdir():
         print(binfile)
+        obsFile = binfile[:-4] + ".obs"
         prefix = binfile[:-4]
         files_with_prefix = [file for file in files_in_path if file.startswith(prefix)]
         dataframes = []
@@ -40,7 +48,6 @@ for binfile in os.listdir():
         dfAltitude = pd.DataFrame()
         dfNavVelocity = pd.DataFrame()
         dfPrecision = pd.DataFrame()
-
         flagRMC = 0
         for i in files_with_prefix:
             if '_GGA.csv' in i:
@@ -91,7 +98,7 @@ for binfile in os.listdir():
                 dfNavVelocity = pd.read_csv(os.path.join(path, i), header=0, sep=',', skiprows=0)
                 #dfNavVelocity['GPS_Time'] = pd.to_datetime(dfNavVelocity['GPS_Time'])
                 dfNavVelocity['GPS_Time'] = dfNavVelocity['GPS_Time'].apply(parse_multiple_formats)
-                
+        time_format = mdates.DateFormatter('%H:%M:%S')        
 
         if dataframes:
             for df in dataframes:
@@ -102,39 +109,41 @@ for binfile in os.listdir():
             print(min_time.strftime("%H:%M:%S"), max_time.strftime("%H:%M:%S"))
         else:
             print('no dfAltitude')
+
+        # OBS parse
+        hdr = gr.rinexheader(obsFile)
+        print(hdr.get('fields'))  # вывод типа данных нав. систем
+
+        obsG = gr.load(obsFile, use=['G'])
+        spisok_name_satG = list((obsG['S1C'].sv.values))                # формируем список всех спутников GPS
+        default_date = pd.Timestamp('1900-01-01')
+        times = pd.Series(obsG.time.values)
+        time_only = times.dt.time
+        times = pd.Series([pd.Timestamp.combine(default_date, t) for t in time_only])
+        #min_time = datetime.strptime('23:53:04', '%H:%M:%S')
+        #max_time = datetime.strptime('00:02:06', '%H:%M:%S')
+
         fig = plt.figure(figsize=(20, 10))
         fig.suptitle(binfile[:-4],  x=0.5, y=0.95, verticalalignment='top')
 
-        # SNR
+        # SNR GPS L1
         ax1 = fig.add_subplot(3, 2, 1)
-        # ax1.set_title('SNR GPS L1 and BeiDou L1, NMEA GSV', fontsize=9)
+        for sv in obsG['sv'].values:
+            sat_data = obsG['S1C'].sel(sv=sv)
+            df = pd.DataFrame({'time': times, 's1c': sat_data.values})
+            df.set_index('time', inplace=True)
+            downsampled_df = df.resample('1S').first()
+            ax1.scatter(downsampled_df.index, downsampled_df['s1c'], label=str(sv), s=2)
+            ax1.plot(downsampled_df.index, downsampled_df['s1c'], linewidth=0.2)
         ax1.set_title('SNR GPS L1, NMEA GSV', fontsize=9)
-
-        for column in dfGPSL1.columns[1:]:
-            ax1.scatter(dfGPSL1['GPS_Time'], dfGPSL1[column], s=2)
-            ax1.plot(dfGPSL1['GPS_Time'], dfGPSL1[column], linewidth=0.2)
-        # for column in dfBeiDouL1.columns[1:]:
-            # ax1.scatter(dfBeiDouL1['GPS_Time'], dfBeiDouL1[column], s=2)
-            # ax1.plot(dfBeiDouL1['GPS_Time'], dfBeiDouL1[column], linewidth=0.2)
-        if not dfGPSL1.empty:
-            sumSNR_gps = dfGPSL1.iloc[:, 1:].sum().sum()
-            countSNR_gps = dfGPSL1.iloc[:, 1:].count().sum()
-            avgSNR_gps = round(float(sumSNR_gps) / float(countSNR_gps), 1)
-
-            #sumSNR_beidou = dfBeiDouL1.iloc[:, 1:].sum().sum()
-            #countSNR_beidou = dfBeiDouL1.iloc[:, 1:].count().sum()
-            #avgSNR_beidou = round(float(sumSNR_beidou) / float(countSNR_beidou), 1)
-
-            ax1.text(0.01, 0.98, f'     GPS L1: {avgSNR_gps} dBHz', fontsize=10, transform=ax1.transAxes, verticalalignment='top')
-            #ax1.text(0.01, 0.92, f'BeiDou L1: {avgSNR_beidou} dBHz', fontsize=10, transform=ax1.transAxes, verticalalignment='top')
         ax1.set_ylim(10, 60)
+        ax1.set_ylabel('SNR, dBHz')
+        ax1.xaxis.set_major_formatter(time_format)
+        ax1.grid(color='black', linestyle='--', linewidth=0.2)
+        ax1.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
+        print(min_time, max_time)
         if not dfAltitude.empty:
             ax1.set_xlim(min_time, max_time)
-        ax1.set_ylabel('SNR, dBHz')
-        ax1.grid(color='black', linestyle='--', linewidth=0.2)
-        #ax1.legend(bbox_to_anchor=(-0.1, 1), loc="upper right")
-        time_format = mdates.DateFormatter('%H:%M:%S')
-        ax1.xaxis.set_major_formatter(time_format)
 
         # # RMC Status
         # textlable1 = ' A=Active \n V=Void'
@@ -149,7 +158,8 @@ for binfile in os.listdir():
         # ax4.grid(color='black', linestyle='--', linewidth=0.2)
         # ax4.legend(bbox_to_anchor=(1, 0.4), loc="lower left")
 
-        # RTK_age_NMEA
+
+        
         if not dfGGA.empty:
             ax4 = fig.add_subplot(3, 2, 2)
             ax4.set_xlim(min_time, max_time)
@@ -160,23 +170,23 @@ for binfile in os.listdir():
             ax4.xaxis.set_major_formatter(time_format)
             ax4.grid(color='black', linestyle='--', linewidth=0.2)
             ax4.legend(bbox_to_anchor=(1, 1), loc="upper left")
- 
+        
 
-
-        # # Nav Status
-        # textlable1 = ' 0=Autonomous \n 1=Float RTK \n 2=Fix RTK'
-        # textlable2 = ' 0=invalid \n 1=initialisation \n 2=search GNSS \n 3=GNSS \n 4=RTK'
-        # ax4 = fig.add_subplot(3, 2, 2)
-        # ax4.set_title('Status, Nav', fontsize=9)
-        # if not dfAltitude.empty:
-            # ax4.set_xlim(min_time, max_time)
-        # ax4.plot(dfNavSatInfo['GPS_Time'], dfNavSatInfo['NSI_Status'], label=textlable2)
-        # ax4.plot(dfNavSatInfo['GPS_Time'], dfNavSatInfo['NavSatInfo'], label=textlable1)
-        # ax4.set_ylabel('Status')
-        # ax4.xaxis.set_major_formatter(time_format)
-        # ax4.grid(color='black', linestyle='--', linewidth=0.2)
-        # ax4.legend(bbox_to_anchor=(1, 0.4), loc="lower left")
-
+        '''
+        # Nav Status
+        textlable1 = ' 0=Autonomous \n 1=Float RTK \n 2=Fix RTK'
+        textlable2 = ' 0=invalid \n 1=initialisation \n 2=search GNSS \n 3=GNSS \n 4=RTK'
+        ax4 = fig.add_subplot(3, 2, 2)
+        ax4.set_title('Status, Nav', fontsize=9)
+        if not dfAltitude.empty:
+            ax4.set_xlim(min_time, max_time)
+        ax4.plot(dfNavSatInfo['GPS_Time'], dfNavSatInfo['NSI_Status'], label=textlable2)
+        ax4.plot(dfNavSatInfo['GPS_Time'], dfNavSatInfo['NavSatInfo'], label=textlable1)
+        ax4.set_ylabel('Status')
+        ax4.xaxis.set_major_formatter(time_format)
+        ax4.grid(color='black', linestyle='--', linewidth=0.2)
+        ax4.legend(bbox_to_anchor=(1, 0.4), loc="lower left")
+        '''
         # Altitude
         ax2 = fig.add_subplot(3, 2, 3)
         ax2.set_title('Altitude, NMEA GGA vs Pressure Sensor', fontsize=9)
@@ -213,19 +223,11 @@ for binfile in os.listdir():
             ax5.plot(dfPrecision['GPS_Time'], dfPrecision['vAccuracy'], label='vAccuracy')
             ax5.plot(dfPrecision['GPS_Time'], dfPrecision['hAccuracy'], label='hAccuracy')
             ax5.set_ylabel('Precision, m')
-            ax5.set_ylim(0, 8)
+            ax5.set_ylim(0, 2)
             ax5.xaxis.set_major_formatter(time_format)
             ax5.grid(color='black', linestyle='--', linewidth=0.2)
             ax5.legend(bbox_to_anchor=(1, 0.75), loc="lower left")
             ax5.set_xlabel('Time')
-        else:
-        # HDOP GGA
-            ax5.set_title('HDOP, NMEA GGA', fontsize=9)
-            ax5.plot(dfGGA['GPS_Time'], dfGGA['HDOP'], label='HDOP')
-            ax5.set_ylabel('HDOP')
-            ax5.xaxis.set_major_formatter(time_format)
-            ax5.grid(color='black', linestyle='--', linewidth=0.2)
-            ax5.legend(bbox_to_anchor=(1, 1), loc="upper left")
 
 
         # Velocity
@@ -237,11 +239,11 @@ for binfile in os.listdir():
             ax6.plot(dfRMC['GPS_Time'], dfRMC['Speed'], label='RMC Velocity')
         if not dfNavVelocity.empty:
             ax6.plot(dfNavVelocity['GPS_Time'], dfNavVelocity['Velocity'], label='NAV Velocity')
-        ax6.set_ylabel('Velocity, mps')
-        ax6.xaxis.set_major_formatter(time_format)
-        ax6.grid(color='black', linestyle='--', linewidth=0.2)
-        ax6.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
-        ax6.set_xlabel('Time')
+            ax6.set_ylabel('Velocity, mps')
+            ax6.xaxis.set_major_formatter(time_format)
+            ax6.grid(color='black', linestyle='--', linewidth=0.2)
+            ax6.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
+            ax6.set_xlabel('Time')
         plt.savefig('Result_Picture/' + binfile[:-4] + '.jpeg', dpi=200)
         #plt.show()
         plt.close(fig)
