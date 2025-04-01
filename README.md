@@ -25,6 +25,7 @@ example usage:
 python3 test_parser.py
 
 ### 2. Analyse Navigation data from NMEA: 
+script - https://github.com/Sanchenso/NMEA
 argument - none 
 
 example usage: 
@@ -36,3 +37,6 @@ argument - none
 
 example usage: 
 python3 plot_parser_result.py
+
+if there is no raw navigation data (NMEA), then use this:
+python3 plot_parser_result_noGNSS.py
