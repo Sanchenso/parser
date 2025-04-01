@@ -32,7 +32,7 @@ example usage:
 python3 NMEA_all.py
 
 ### 3. Analyse Navigation data from NMEA: 
-Plotting six graphs, including SNR, altitude, speeds, correction lifetime, navigation status, and navigational accuracy
+Plotting six graphs, including SNR, altitude, speeds, rtkAGE, navigation status, and navigational accuracy
 argument - none 
 
 example usage: 
