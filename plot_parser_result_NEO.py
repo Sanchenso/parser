@@ -5,7 +5,7 @@ import georinex as gr
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import timedelta, datetime
-
+import matplotlib.ticker as ticker
 path = "Result_CSV"
 files_in_path = os.listdir(path)
 suffix = ['_GGA.csv', '_channel_gnss_126_GPS_L1_SNR.csv', '_BarAltitude.csv']
@@ -136,7 +136,8 @@ for binfile in os.listdir():
             ax1.scatter(downsampled_df.index, downsampled_df['s1c'], label=str(sv), s=2)
             ax1.plot(downsampled_df.index, downsampled_df['s1c'], linewidth=0.2)
         ax1.set_title('SNR GPS L1, NMEA GSV', fontsize=9)
-        ax1.set_ylim(10, 60)
+        ax1.set_ylim(25, 45)
+        ax1.yaxis.set_major_locator(ticker.MultipleLocator(2))
         ax1.set_ylabel('SNR, dBHz')
         ax1.xaxis.set_major_formatter(time_format)
         ax1.grid(color='black', linestyle='--', linewidth=0.2)

@@ -29,6 +29,7 @@ def parser(binFile):
     csv_file_Motor = quote(arg + "_Motor.csv")
     csv_file_RawAccelGyroData = quote(arg + "_RawAccelGyroData.csv")
     csv_file_ExtPowerStatus = quote(arg + "_ExtPowerStatus.csv")
+    csv_file_PyroBoardState = quote(arg + "_PyroBoardState.csv")
     ubxFile = quote(arg + ".dat")
     binFile_quoted = quote(binFile)
 
@@ -50,6 +51,7 @@ def parser(binFile):
         f'>(rg Orientation > {csv_file_Orientation}) '
         f'>(rg Motor > {csv_file_Motor}) '
         f'>(rg RawAccelGyroData > {csv_file_RawAccelGyroData}) '
+        f'>(rg PyroBoardState > {csv_file_PyroBoardState}) '
         f'>/dev/null"'
     )
 
@@ -325,6 +327,18 @@ for binFile in files:
     except:
         os.remove(csv_file_RawAccelGyroData)
         print('No RawAccelGyroData')   
+
+    try:
+        csv_file_PyroBoardState = arg + "_PyroBoardState.csv"
+        df = pd.read_csv(csv_file_PyroBoardState, header=None, sep=' ', skiprows=1)
+        df[1] = df[0].copy()
+        df[0] = df[0].apply(lambda x: convert_time(x, coefficients, polynomial))
+        df = df.rename(columns={0: 'GPS_Time', 2: 'channel_1', 3: 'channel_2', 4: 'channel_3', 5: 'channel_4', 1: 'Drone_Time'})
+        df_csv_file_PyroBoardState = df
+        df.to_csv(csv_file_PyroBoardState, index=False)
+    except:
+        print('No PyroBoardState')
+        os.remove(csv_file_PyroBoardState)
     
     for csvfile in glob.glob('*.csv'):
         if os.path.getsize(csvfile) > 0:
