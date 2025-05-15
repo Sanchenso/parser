@@ -19,7 +19,7 @@ example usage:
 
 `python plot_parser_result_IMU.py`
 
-### 2. Visual evaluation of the autopilot filter for the accelerometer and gyroscope data (windows)
+### 2. Visual evaluation of the autopilot filter for the accelerometer and gyroscope data 
 argument - name of the log
 
 example usage:
@@ -34,7 +34,7 @@ example usage:
 
 `python3 test_parser.py`
 
-### 2. Analyse Navigation data from NMEA (linux): 
+### 2. Analyse Navigation data from NMEA: 
 script - https://github.com/Sanchenso/NMEA
 argument - none 
 
@@ -42,7 +42,7 @@ example usage:
 
 `python3 NMEA_all.py`
 
-### 3. Analyse Navigation data from NMEA (linux): 
+### 3. Analyse Navigation data from NMEA: 
 Plotting six graphs, including SNR, altitude, speeds, rtkAGE, navigation status, and navigational accuracy
 argument - none 
 
