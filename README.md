@@ -13,7 +13,7 @@ Open PowerShell as root in the folder with install-rg.ps1 and requirements.txt. 
 ### 1. Building a signal spectrogram of the Giroscope Data
 argument - none
 
-The folder must contain maip.py , plot_parser_result_IMU.py , parser.exe, logs
+The folder must contain main.py , plot_parser_result_IMU.py , parser.exe, logs
 
 example usage: 
 
