@@ -9,7 +9,6 @@ from scipy.fft import fft
 from scipy.signal import stft
 import numpy as np
 
-# Создаем директорию для результатов, если её нет
 if not os.path.exists('Result_CSV'):
     os.makedirs('Result_CSV')
 if not os.path.exists('Result_Picture_IMU'):
@@ -19,8 +18,8 @@ dfMotor = pd.DataFrame()
 dfRawAccelGyroData = pd.DataFrame()
 dfRawAccelGyroDataAll = pd.DataFrame()
 
-#columns_to_filter = ['accel_X', 'accel_Y', 'accel_Z']
-columns_to_filter = ['gyro_X', 'gyro_Y', 'gyro_Z']
+columns_to_filter = ['accel_X', 'accel_Y', 'accel_Z']
+#columns_to_filter = ['gyro_X', 'gyro_Y', 'gyro_Z']
 
 # Функция парсинга нескольких форматов даты и времени
 def parse_multiple_formats(date_str):
@@ -50,35 +49,36 @@ def apply_kalman_filter(data, R=5, Q=1):
         filtered_data.append(kf.x[0])
     return filtered_data
 
-# Рекурсивная функция для работы с файлами в директориях
-def process_directory(directory):
-    for root, _, files in os.walk(directory):
-        for binfile in files:
-            if binfile.endswith('.bin'):
-                print("Processing:", binfile)
-                process_file(os.path.join(root, binfile))
-
 def process_file(binfile):
     nameFile_int, nameFile_ext = os.path.splitext(os.path.basename(binfile))
-    csv_file_RawAccelGyroData = nameFile_int + "_RawAccelGyroData.csv"
-    command = f"./parser --print_entries {binfile} | rg RawAccelGyroData > {csv_file_RawAccelGyroData}"
-    subprocess.run(command, shell=True)
+    csv_file_RawAccelGyroData = f"{nameFile_int}_RawAccelGyroData.csv"
+    destination_csv_path = os.path.join('Result_CSV', csv_file_RawAccelGyroData)
+    print(f"python main.py {binfile}")
+    subprocess.run(f"python main.py {binfile}", shell=True)
+    if not os.path.exists(destination_csv_path):
+        is_windows = os.name == 'nt'
+        parser_command = "parser.exe" if is_windows else "parser"
+        command = f"{parser_command} --print_entries {binfile} | rg RawAccelGyroData > {csv_file_RawAccelGyroData}"
+        subprocess.run(command, shell=True)
 
-    # Убираем временные файлы
-    temp_files = [
-        f"{nameFile_int}_flight_0.gscl",
-        f"{nameFile_int}_flight_0.params",
-        f"{nameFile_int}_channel_lua_125.dat",
-        f"{nameFile_int}_channel_passports_124.dat",
-        f"{nameFile_int}_channel_telemetry_123.dat"
-    ]
-    for temp_file in temp_files:
-        try:
-            os.remove(temp_file)
-        except FileNotFoundError:
-            pass  # Если файл не найден, ничего не делаем
-    
-    os.rename(csv_file_RawAccelGyroData, os.path.join('Result_CSV', csv_file_RawAccelGyroData))
+        temp_files = [
+            f"{nameFile_int}_flight_0.gscl",
+            f"{nameFile_int}_flight_0.params",
+            f"{nameFile_int}_channel_lua_125.dat",
+            f"{nameFile_int}_channel_passports_124.dat",
+            f"{nameFile_int}_channel_telemetry_123.dat"
+        ]
+        for temp_file in temp_files:
+            try:
+                os.remove(temp_file)
+            except FileNotFoundError:
+                pass  # Если файл не найден, ничего не делаем
+
+        os.rename(csv_file_RawAccelGyroData, destination_csv_path)
+    else:
+        print(f"{destination_csv_path} already exists. Skipping parser command.")
+
+
     
     dfRawAccelGyroData = pd.read_csv(os.path.join('Result_CSV', csv_file_RawAccelGyroData), header=None, sep=' ', skiprows=1)
     dfRawAccelGyroData = dfRawAccelGyroData.rename(columns={0: 'Time', 2: 'accel_X', 3: 'accel_Y', 4: 'accel_Z', 6: 'gyro_X', 7: 'gyro_Y', 8: 'gyro_Z'})
@@ -130,7 +130,6 @@ def process_file(binfile):
         ax_spectr.set_xlabel('Время [sec]')
         ax_spectr.set_ylabel('Частота [Hz]')
         #cbar = fig.colorbar(pcm, ax=ax_spectr)
-        #cbar.set_label('Мощность/Частота (dB/Hz)')
 
         plt.tight_layout()
         # plt.savefig('Result_Picture_IMU/' + nameFile_int + '_accel_new.jpeg',dpi=100)
@@ -143,91 +142,11 @@ def process_file(binfile):
         #ax_spectr.set_colorbars(label='Amplitude')
         #ax_spectr.ylim([20, fs/2])
         
-process_directory(".")
+
+for binfile in os.listdir():
+    if binfile.endswith('.bin'):
+        print("Processing:", binfile)
+        process_file(binfile)
      
             
-           
-        
-        
-'''
-        time_format = mdates.DateFormatter('%H:%M:%S')
-        fig = plt.figure(figsize=(20, 10))
-        fig.suptitle(binfile[:-4],  x=0.5, y=0.95, verticalalignment='top')
-        
-        # accel_X
-        ax1 = fig.add_subplot(3, 2, 1)
-        ax1.set_title('accel_X', fontsize=9)
-        ax1.scatter(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_X'], label='accel_X', s=2)
-        ax1.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_X'], linewidth=0.2)
-        #ax1.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_X_filtered'], linewidth=0.4)
-        ax1.set_ylabel('accel_X')
-        ax1.xaxis.set_major_formatter(time_format)
-        ax1.set_ylim(-10000, 10000)
-        ax1.grid(color='black', linestyle='--', linewidth=0.2)
-        ax1.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
-
-        # accel_Y
-        ax2 = fig.add_subplot(3, 2, 3)
-        ax2.set_title('accel_Y', fontsize=9)
-        ax2.scatter(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_Y'], label='accel_Y', s=2)
-        ax2.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_Y'], linewidth=0.2)
-        #ax2.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_Y_filtered'], linewidth=0.2)
-        ax2.set_ylabel('accel_Y')
-        ax2.xaxis.set_major_formatter(time_format)
-        ax2.set_ylim(-10000, 10000)
-        ax2.grid(color='black', linestyle='--', linewidth=0.2)
-        ax2.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
-        
-        # accel_Z
-        ax3 = fig.add_subplot(3, 2, 5)
-        ax3.set_title('accel_Z', fontsize=9)
-        ax3.scatter(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_Z'], label='accel_Z', s=2)
-        ax3.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_Z'], linewidth=0.2)
-        #ax3.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['accel_Z_filtered'], linewidth=0.2)
-        ax3.set_ylabel('accel_Z')
-        ax3.xaxis.set_major_formatter(time_format)
-        ax3.set_ylim(-10000, 10000)
-        ax3.grid(color='black', linestyle='--', linewidth=0.2)
-        ax3.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")   
-        
-        # gyro_X
-        ax4 = fig.add_subplot(3, 2, 2)
-        ax4.set_title('gyro_X', fontsize=9)
-        ax4.scatter(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_X'], label='gyro_X', s=2)
-        ax4.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_X'], linewidth=0.2)
-        #ax4.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_X_filtered'], linewidth=0.2)
-        ax4.set_ylabel('gyro_X')
-        ax4.xaxis.set_major_formatter(time_format)
-        ax4.set_ylim(-3000, 2000)
-        ax4.grid(color='black', linestyle='--', linewidth=0.2)
-        ax4.legend(bbox_to_anchor=(1, 1), loc="upper left")
-
-        # gyro_Y
-        ax5 = fig.add_subplot(3, 2, 4)
-        ax5.set_title('gyro_Y', fontsize=9)
-        ax5.scatter(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_Y'], label='gyro_Y', s=2)
-        ax5.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_Y'], linewidth=0.2)
-        #ax5.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_Y_filtered'], linewidth=0.2)
-        ax5.set_ylabel('gyro_Y')
-        ax5.xaxis.set_major_formatter(time_format)
-        ax5.set_ylim(-3000, 2000)
-        ax5.grid(color='black', linestyle='--', linewidth=0.2)
-        ax5.legend(bbox_to_anchor=(1, 1), loc="upper left")
-        
-        # gyro_Z
-        ax6 = fig.add_subplot(3, 2, 6)
-        ax6.set_title('gyro_Z', fontsize=9)
-        ax6.scatter(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_Z'], label='gyro_Z', s=2)
-        ax6.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_Z'], linewidth=0.2)
-        #ax6.plot(dfRawAccelGyroData['GPS_Time'], dfRawAccelGyroData['gyro_Z_filtered'], linewidth=0.2)
-        ax6.set_ylabel('gyro_Z')
-        ax6.xaxis.set_major_formatter(time_format)
-        ax6.set_ylim(-3000, 2000)
-        ax6.grid(color='black', linestyle='--', linewidth=0.2)
-        ax6.legend(bbox_to_anchor=(1, 1), loc="upper left")          
-        
-        plt.savefig('Result_Picture_IMU/' + binfile[:-4], dpi=300)
-        #plt.show()
-'''
-        
         

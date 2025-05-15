@@ -8,7 +8,7 @@ import matplotlib.ticker as ticker
 path = "Result_CSV"
 files_in_path = os.listdir(path)
 suffix = ['_GGA.csv', '_channel_gnss_126_GPS_L1_SNR.csv', '_BarAltitude.csv']
-
+flagRECEIVER = ''
 uav_mode_labels = {
     0: 'ROOT',
     1: 'DISARMED', 
@@ -74,6 +74,8 @@ for binfile in os.listdir():
 
 
         flagRMC = 0
+        flagTXT = 0
+        flagRECEIVER = ''
         for i in files_with_prefix:
             if '_GGA.csv' in i:
                 dfGGA = pd.read_csv(os.path.join(path, i), header=0, sep=',', skiprows=0)
@@ -99,7 +101,15 @@ for binfile in os.listdir():
                 flagTXT = 1
                 dfTXT = pd.read_csv(os.path.join(path, i), header=0, sep=',', skiprows=0)
                 #dfTXT['GPS_Time'] = pd.to_datetime(dfTXT['GPS_Time'])  
-                dfTXT['GPS_Time'] = dfTXT['GPS_Time'].apply(parse_multiple_formats)    
+                dfTXT['GPS_Time'] = dfTXT['GPS_Time'].apply(parse_multiple_formats)
+                if len(dfTXT.columns) > 7:
+                    flagRECEIVER = 'D10P'
+                    dfTXT['6'] = dfTXT['6'].astype(str)  # Convert all values to str
+                    dfTXT['6'] = dfTXT['6'].replace('nan', '')  # Optionally replace 'nan' strings with empty strings   
+                    dfTXT['8'] = dfTXT['8'].astype(str)
+                    dfTXT['9'] = dfTXT['9'].astype(str)
+
+
             if '_BarAltitude.csv' in i and os.path.getsize(os.path.join(path, i)) > 100:
                 dfAltitude = pd.read_csv(os.path.join(path, i), header=0, sep=',', skiprows=0)
                 #dfAltitude['GPS_Time'] = pd.to_datetime(dfAltitude['GPS_Time'])
@@ -143,7 +153,12 @@ for binfile in os.listdir():
                 #dfUavMode['GPS_Time'] = pd.to_datetime(dfUavMode['GPS_Time'])
                 dfUavMode['GPS_Time'] = dfUavMode['GPS_Time'].apply(parse_multiple_formats)
                 takeoff_rows = dfUavMode[dfUavMode['UavMode'] == 24] 
-                takeoff_time = takeoff_rows.iloc[0]['GPS_Time']
+                if not takeoff_rows.empty:
+                    takeoff_time = takeoff_rows.iloc[0]['GPS_Time']
+                else:
+                    takeoff_rows = dfUavMode[dfUavMode['UavMode'] == 10] 
+                    print(takeoff_rows)
+                    takeoff_time = takeoff_rows.iloc[0]['GPS_Time']
 
         if dataframes:
             for df in dataframes:
@@ -293,10 +308,15 @@ for binfile in os.listdir():
         ax5.set_xlim(min_time, max_time)
         if flagTXT == 1:
             dfTXT.columns = ['GPS_Time'] + list(dfTXT.iloc[:, 1:].columns)
-            ax5.plot(dfTXT['GPS_Time'], dfTXT['1'], label='$TXT,x')
-            ax5.plot(dfTXT['GPS_Time'], dfTXT['2'], label='$TXT,,x')
-            ax5.plot(dfTXT['GPS_Time'], dfTXT['3'], label='$TXT,,,x')
-            ax5.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
+            if flagRECEIVER == 'D10P':
+                ax5.plot(dfTXT['GPS_Time'], dfTXT['6'], label='$TXT,ant')
+                ax5.plot(dfTXT['GPS_Time'], dfTXT['8'], label='$TXT,ch A GAIN, dB')
+                ax5.plot(dfTXT['GPS_Time'], dfTXT['9'], label='$TXT,ch B GAIN, dB')
+            else:
+                ax5.plot(dfTXT['GPS_Time'], dfTXT['1'], label='$TXT,x')
+                ax5.plot(dfTXT['GPS_Time'], dfTXT['2'], label='$TXT,,x')
+                ax5.plot(dfTXT['GPS_Time'], dfTXT['3'], label='$TXT,,,x')
+                ax5.legend(bbox_to_anchor=(-0.05, 1), loc="upper right")
         ax5.set_ylabel('Message')
         ax5.xaxis.set_major_formatter(time_format)
         ax5.grid(color='black', linestyle='--', linewidth=0.2)
@@ -347,7 +367,30 @@ for binfile in os.listdir():
                             bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', boxstyle='round,pad=0.1'))
 
 
-
+        
+        # Precision
+        ax6 = fig.add_subplot(3, 2, 6)
+        ax6.set_title('Precision, NavAUTO', fontsize=9)
+        if not dfAltitude.empty:
+            ax6.set_xlim(min_time, max_time)
+        if not dfPrecision.empty:
+            ax6.plot(dfPrecision['GPS_Time'], dfPrecision['vAccuracy'], label='vAccuracy')
+            ax6.plot(dfPrecision['GPS_Time'], dfPrecision['hAccuracy'], label='hAccuracy')
+            ax6.set_ylabel('Precision, m')
+            ax6.set_ylim(0, 8)
+            ax6.xaxis.set_major_formatter(time_format)
+            ax6.grid(color='black', linestyle='--', linewidth=0.2)
+            ax6.legend(bbox_to_anchor=(1, 0.75), loc="lower left")
+            ax6.set_xlabel('Time')
+        else:
+        # HDOP GGA
+            ax6.set_title('HDOP, NMEA GGA', fontsize=9)
+            ax6.plot(dfGGA['GPS_Time'], dfGGA['HDOP'], label='HDOP')
+            ax6.set_ylabel('HDOP')
+            ax6.xaxis.set_major_formatter(time_format)
+            ax6.grid(color='black', linestyle='--', linewidth=0.2)
+            ax6.legend(bbox_to_anchor=(1, 1), loc="upper left")
+        '''
         # PyroBoardState
         ax6 = fig.add_subplot(3, 2, 6)
         if not dfPyroBoardState.empty:
@@ -363,7 +406,7 @@ for binfile in os.listdir():
         ax6.xaxis.set_major_formatter(time_format)
         ax6.grid(color='black', linestyle='--', linewidth=0.2)
         ax6.set_xlabel('Time')
-
+        '''
 
         plt.savefig('Result_Picture/' + binfile[:-4] + '.jpeg', dpi=200)
         #plt.show()
