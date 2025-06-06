@@ -55,7 +55,7 @@ def parse_log(file_path):
     nameFile_int, nameFile_ext = os.path.splitext(file_path)
     csv_file_RawAccelGyroData = nameFile_int + "_RawAccelGyroData.txt"
     is_windows = os.name == 'nt'
-    parser_command = "./parser.exe" if is_windows else "./parser"
+    parser_command = "parser.exe" if is_windows else "./parser"
     command = f"{parser_command} --print_entries {file_path} | rg RawAccelGyroData > {csv_file_RawAccelGyroData}"
     #command = f"{parser_command} --print_entries {file_path} | grep RawAccelGyroData > {csv_file_RawAccelGyroData}"
     #command = f"powershell -Command \"{parser_command} --print_entries {file_path} | Select-String RawAccelGyroData > {csv_file_RawAccelGyroData}\""
