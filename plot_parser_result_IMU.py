@@ -53,34 +53,29 @@ def process_file(binfile):
     nameFile_int, nameFile_ext = os.path.splitext(os.path.basename(binfile))
     csv_file_RawAccelGyroData = f"{nameFile_int}_RawAccelGyroData.csv"
     destination_csv_path = os.path.join('Result_CSV', csv_file_RawAccelGyroData)
-    print(f"python main.py {binfile}")
-    subprocess.run(f"python main.py {binfile}", shell=True)
-    if not os.path.exists(destination_csv_path):
-        is_windows = os.name == 'nt'
-        parser_command = "parser.exe" if is_windows else "parser"
-        command = f"{parser_command} --print_entries {binfile} | rg RawAccelGyroData > {csv_file_RawAccelGyroData}"
-        subprocess.run(command, shell=True)
+    #print(f"python main.py {binfile}")
+    #subprocess.run(f"python main.py {binfile}", shell=True)
+    is_windows = os.name == 'nt'
+    parser_command = "parser.exe" if is_windows else "./parser"
+    #command = f"{parser_command} --print_entries {binfile} | rg RawAccelGyroData > {csv_file_RawAccelGyroData}"
+    command = f"{parser_command} --print_entries {binfile} | grep RawAccelGyroData > {csv_file_RawAccelGyroData}"
 
-        temp_files = [
-            f"{nameFile_int}_flight_0.gscl",
-            f"{nameFile_int}_flight_0.params",
-            f"{nameFile_int}_channel_lua_125.dat",
-            f"{nameFile_int}_channel_passports_124.dat",
-            f"{nameFile_int}_channel_telemetry_123.dat"
-        ]
-        for temp_file in temp_files:
-            try:
-                os.remove(temp_file)
-            except FileNotFoundError:
-                pass  # Если файл не найден, ничего не делаем
+    subprocess.run(command, shell=True)
+    os.rename(csv_file_RawAccelGyroData, destination_csv_path)
+    temp_files = [
+        f"{nameFile_int}_flight_0.gscl",
+        f"{nameFile_int}_flight_0.params",
+        f"{nameFile_int}_channel_lua_125.dat",
+        f"{nameFile_int}_channel_passports_124.dat",
+        f"{nameFile_int}_channel_telemetry_123.dat",
+    ]
+    for temp_file in temp_files:
+        try:
+            os.remove(temp_file)
+        except FileNotFoundError:
+            pass  # Если файл не найден, ничего не делаем
 
-        os.rename(csv_file_RawAccelGyroData, destination_csv_path)
-    else:
-        print(f"{destination_csv_path} already exists. Skipping parser command.")
-
-
-    
-    dfRawAccelGyroData = pd.read_csv(os.path.join('Result_CSV', csv_file_RawAccelGyroData), header=None, sep=' ', skiprows=1)
+    dfRawAccelGyroData = pd.read_csv(os.path.join(destination_csv_path), header=None, sep=' ', skiprows=1)
     dfRawAccelGyroData = dfRawAccelGyroData.rename(columns={0: 'Time', 2: 'accel_X', 3: 'accel_Y', 4: 'accel_Z', 6: 'gyro_X', 7: 'gyro_Y', 8: 'gyro_Z'})
     
     # Построение графиков
@@ -94,10 +89,10 @@ def process_file(binfile):
         # Выполнение преобразования Фурье
         fft_values = np.fft.fft(dfRawAccelGyroData[column].values)
         N = len(fft_values)
-        frequencies = np.fft.fftfreq(N, 0.002)
+        fs = 1 / np.mean(np.diff(dfRawAccelGyroData['Time'].values))  # Вычисляем частоту дискретизации
+        frequencies = np.fft.fftfreq(N, (1 / fs))
         positive_frequencies = frequencies[:N // 2]
         positive_fft_values = np.abs(fft_values[:N // 2])
-        fs = 1 / np.mean(np.diff(dfRawAccelGyroData['Time'].values))  # Вычисляем частоту дискретизации
         f, t, Zxx = stft(dfRawAccelGyroData[column].values, fs=fs, nperseg=256, noverlap=128)
         
         Sxx = np.abs(Zxx) ** 2  # Вычисляем квадрат амплитуды для получения мощности
@@ -110,7 +105,7 @@ def process_file(binfile):
         ax_time.set_title(f'{nameFile_int}')
         ax_time.set_xlabel('Sample')
         ax_time.set_ylabel('Amplitude')
-        #ax_time.set_ylim(-3000, 3000)
+        ax_time.set_ylim(-5000, 5000)
         
         # График спектра в частотной области
         ax_freq.plot(positive_frequencies, positive_fft_values)
@@ -118,8 +113,8 @@ def process_file(binfile):
         ax_freq.set_title(f'Frequency')
         ax_freq.set_xlabel('Frequency')
         ax_freq.set_ylabel('Magnitude')
-        #ax_freq.set_ylim(0, 300000)
-        ax_freq.set_xlim(-1, 250)
+        ax_freq.set_ylim(0, 800000)
+        #ax_freq.set_xlim(-1, 250)
         plt.tight_layout()
         
         # Построение спектрограммы

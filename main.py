@@ -55,8 +55,10 @@ def parse_log(file_path):
     nameFile_int, nameFile_ext = os.path.splitext(file_path)
     csv_file_RawAccelGyroData = nameFile_int + "_RawAccelGyroData.txt"
     is_windows = os.name == 'nt'
-    parser_command = "parser.exe" if is_windows else "parser"
+    parser_command = "./parser.exe" if is_windows else "./parser"
     command = f"{parser_command} --print_entries {file_path} | rg RawAccelGyroData > {csv_file_RawAccelGyroData}"
+    #command = f"{parser_command} --print_entries {file_path} | grep RawAccelGyroData > {csv_file_RawAccelGyroData}"
+    #command = f"powershell -Command \"{parser_command} --print_entries {file_path} | Select-String RawAccelGyroData > {csv_file_RawAccelGyroData}\""
     subprocess.run(command, shell=True)
 
     with open(csv_file_RawAccelGyroData, 'r') as file:
@@ -65,9 +67,9 @@ def parse_log(file_path):
             match = re.search(r'RawAccelGyroData\s([\d-]+)\s([\d-]+)\s([\d-]+)\s([\d-]+)\s([\d-]+)\s([\d-]+)\s([\d-]+)',
                               line)
             if match:
-                line_counter += 1
-                if line_counter <= 10000:
-                    continue
+                #line_counter += 1
+                #if line_counter <= 10000:
+                #    continue
                 accel_x, accel_y, accel_z, _, gyro_x, gyro_y, gyro_z = match.groups()
                 # gyro_x, gyro_y, gyro_z, _, _, _, _ = match.groups()
                 data['accel_x'].append(int(accel_x))
@@ -76,7 +78,6 @@ def parse_log(file_path):
                 data['gyro_x'].append(int(gyro_x))
                 data['gyro_y'].append(int(gyro_y))
                 data['gyro_z'].append(int(gyro_z))
-
     return data
 
 
@@ -111,6 +112,7 @@ def perform_fft_analysis(data_raw, data_filtered, logfile_name):
         x_raw = np.linspace(0.0, N_raw * T, N_raw, endpoint=False)
         y_raw = np.array(signal_raw)
         yf_raw = fft(y_raw)
+
         xf_raw = np.fft.fftfreq(N_raw, T)[:N_raw // 2]
 
         # Filtered data
@@ -157,7 +159,6 @@ if __name__ == '__main__':
     #logfile_name = args.logfile[:-4]
     logfile_name = os.path.splitext(args.logfile)[0]
     print(logfile_name)
-    
     data = parse_log(args.logfile)
     filtered_data = apply_filter(data)
     perform_fft_analysis(data, filtered_data, args.logfile)
